@@ -3,13 +3,17 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\ExpenseController;
+
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', [ExpenseController::class, 'index'])->name('dashboard');
+    Route::resource('expenses', ExpenseController::class)->except(['index', 'create', 'edit']);
+    Route::get('/expenses/{expense}/history', [ExpenseController::class, 'history'])->name('expenses.history');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
