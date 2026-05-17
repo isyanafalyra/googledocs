@@ -407,17 +407,24 @@
                             
                             // 3. Dengarkan Event Real-Time Broadcasting
                             .listen('ExpenseCreated', (e) => {
-                                // Masukkan data baru ke list paling atas (tanpa refresh)
-                                this.expenses.unshift(e.expense);
-                                this.triggerNotification('success', 'Pengeluaran "' + e.expense.title + '" baru saja ditambahkan oleh ' + e.expense.user.name);
+                                // Hanya masukkan data baru jika ID belum ada di array lokal (mencegah duplikasi)
+                                if (!this.expenses.some(item => item.id === e.expense.id)) {
+                                    this.expenses.unshift(e.expense);
+                                    this.triggerNotification('success', 'Pengeluaran "' + e.expense.title + '" baru saja ditambahkan oleh ' + (e.expense.user ? e.expense.user.name : 'Kolaborator'));
+                                }
                             })
                             .listen('ExpenseUpdated', (e) => {
                                 // Ganti item lama di dalam array dengan yang ter-update
                                 const index = this.expenses.findIndex(item => item.id === e.expense.id);
                                 if (index !== -1) {
                                     this.expenses[index] = e.expense;
+                                } else {
+                                    // Jika belum ada di list lokal, tambahkan dengan aman
+                                    if (!this.expenses.some(item => item.id === e.expense.id)) {
+                                        this.expenses.unshift(e.expense);
+                                    }
                                 }
-                                this.triggerNotification('success', 'Pengeluaran "' + e.expense.title + '" diperbarui oleh ' + e.expense.user.name);
+                                this.triggerNotification('success', 'Pengeluaran "' + e.expense.title + '" diperbarui oleh ' + (e.expense.user ? e.expense.user.name : 'Kolaborator'));
                             })
                             .listen('ExpenseDeleted', (e) => {
                                 // Hapus data dari daftar di browser
@@ -469,8 +476,10 @@
                     try {
                         const response = await axios.post('/expenses', this.addForm);
                         if (response.data.success) {
-                            // Tambahkan ke array lokal agar langsung ter-render di layar sendiri
-                            this.expenses.unshift(response.data.expense);
+                            // Tambahkan ke array lokal jika belum ada agar langsung ter-render di layar sendiri
+                            if (!this.expenses.some(item => item.id === response.data.expense.id)) {
+                                this.expenses.unshift(response.data.expense);
+                            }
                             
                             // Reset input form
                             this.addForm.title = '';
