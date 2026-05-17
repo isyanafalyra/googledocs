@@ -45,4 +45,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get the expenses for the user.
+     */
+    public function expenses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    /**
+     * Get the expense versions updated by the user.
+     */
+    public function expenseVersions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ExpenseVersion::class, 'updated_by');
+    }
 }

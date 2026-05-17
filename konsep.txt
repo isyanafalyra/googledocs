@@ -1,0 +1,109 @@
+PROJECT BRIEF
+Real-time Collaborative Daily Expense Tracker
+
+1. DESKRIPSI PROJECT
+Membuat aplikasi web untuk mencatat pengeluaran harian secara kolaboratif, di mana beberapa pengguna dapat menambah, mengedit, dan menghapus data secara bersamaan dalam satu halaman secara real-time tanpa perlu refresh.
+
+2. TUJUAN PROJECT
+- Memudahkan pencatatan pengeluaran harian bersama teman.
+- Mendukung kolaborasi multi-user secara real-time.
+- Menyediakan riwayat perubahan data (version history).
+- Menangani konflik saat terjadi edit data secara bersamaan.
+
+3. TEKNOLOGI YANG DIGUNAKAN
+- Laravel 12
+- Laravel Reverb (WebSocket)
+- Laravel Breeze (Authentication)
+- Node.js (untuk frontend dan real-time support)
+- MySQL
+- JavaScript (Alpine.js atau Vanilla JS)
+- Bootstrap atau Tailwind CSS
+
+4. FITUR UTAMA
+
+A. Authentication
+- Register
+- Login
+- Logout
+
+B. Expense Management
+- Tambah pengeluaran
+- Edit pengeluaran
+- Hapus pengeluaran
+- Menampilkan daftar pengeluaran
+
+C. Kategori Pengeluaran
+- Makanan
+- Transportasi
+- Lainnya
+
+D. Real-Time Collaboration
+- Multi-user editing
+- Update data secara langsung tanpa refresh
+- Menampilkan user aktif
+
+E. Version History
+- Menyimpan riwayat perubahan data
+- Menampilkan siapa yang mengubah data
+- Menampilkan waktu perubahan
+
+F. Conflict Resolution
+- Menggunakan timestamp (last write wins)
+- Menentukan perubahan terakhir yang digunakan
+- Menjaga konsistensi data antar user
+
+5. FITUR WAJIB
+- Multi-user editing
+- Real-time update (tanpa refresh)
+- Version history
+- Conflict resolution
+
+6. STRUKTUR DATABASE
+
+users
+- id
+- name
+- email
+- password
+
+expenses
+- id
+- user_id
+- title
+- amount
+- category
+- created_at
+- updated_at
+
+expense_versions
+- id
+- expense_id
+- title
+- amount
+- category
+- updated_by
+- created_at
+
+7. HALAMAN
+- Login
+- Register
+- Dashboard (Expense)
+- History
+
+8. ALUR KERJA
+1. User login
+2. User menambah/mengedit data
+3. Data dikirim melalui WebSocket
+4. Semua user menerima update tanpa refresh
+5. Sistem menyimpan history
+6. Jika konflik, sistem pilih data terbaru
+
+9. CATATAN
+- Fokus pada fitur utama
+- UI sederhana
+- Menggunakan best practice Laravel
+
+10. JUDUL PROJECT
+Real-time Collaborative Daily Expense Tracker
+
+buatkan langkah demi langkah biar saya paham
