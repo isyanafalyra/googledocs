@@ -67,8 +67,8 @@ class ExpenseController extends Controller
         // 4. Siarkan event ke pengguna lain secara real-time melalui Reverb
         broadcast(new \App\Events\ExpenseCreated($expense))->toOthers();
 
-        // 5. Jika request meminta JSON (AJAX), kembalikan data baru
-        if ($request->expectsJson()) {
+        // 5. Mengembalikan data baru dalam format JSON untuk AJAX/Axios
+        if ($request->expectsJson() || $request->ajax() || $request->wantsJson() || $request->hasHeader('X-Requested-With')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Pengeluaran berhasil ditambahkan.',
@@ -130,8 +130,8 @@ class ExpenseController extends Controller
         // 5. Siarkan perubahan ke pengguna aktif lain secara real-time
         broadcast(new \App\Events\ExpenseUpdated($expense))->toOthers();
 
-        // 6. Jika request meminta JSON (AJAX)
-        if ($request->expectsJson()) {
+        // 6. Mengembalikan data baru dalam format JSON untuk AJAX/Axios
+        if ($request->expectsJson() || $request->ajax() || $request->wantsJson() || $request->hasHeader('X-Requested-With')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Pengeluaran berhasil diperbarui.',
@@ -157,8 +157,8 @@ class ExpenseController extends Controller
         // Siarkan penghapusan ke pengguna aktif lain
         broadcast(new \App\Events\ExpenseDeleted($expenseId))->toOthers();
 
-        // Jika request meminta JSON (AJAX)
-        if (request()->expectsJson()) {
+        // Mengembalikan respons JSON untuk AJAX/Axios
+        if (request()->expectsJson() || request()->ajax() || request()->wantsJson() || request()->hasHeader('X-Requested-With')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Pengeluaran berhasil dihapus.',
