@@ -61,29 +61,39 @@
 
             <!-- 2. FORM TAMBAH PENGELUARAN BARU (Menggunakan AJAX) -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100 mb-4">
-                    Tambah Pengeluaran Baru
-                </h3>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
+                    <h3 class="font-bold text-lg text-gray-800 dark:text-gray-100">
+                        Tambah Pengeluaran Baru
+                    </h3>
+                    <!-- Indikator Mengetik (Typing Indicator) -->
+                    <div x-show="Object.keys(typingUsers).length > 0" class="flex items-center space-x-2 text-xs text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-900/50 shadow-sm transition-all duration-300 animate-pulse" style="display: none;">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        <span x-text="Object.values(typingUsers).join(', ') + ' sedang mengetik...'"></span>
+                    </div>
+                </div>
                 
                 <form @submit.prevent="addExpense" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <!-- Input Judul -->
                     <div>
                         <label for="title" class="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Nama Pengeluaran</label>
-                        <input type="text" x-model="addForm.title" id="title" required placeholder="Contoh: Beli Makan Siang" 
+                        <input type="text" x-model="addForm.title" id="title" required placeholder="Contoh: Beli Makan Siang" @input="broadcastTyping()"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-sm focus:border-indigo-500 focus:ring-indigo-500 p-3">
                     </div>
 
                     <!-- Input Nominal -->
                     <div>
                         <label for="amount" class="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Jumlah Nominal (Rp)</label>
-                        <input type="number" x-model="addForm.amount" id="amount" required min="0" placeholder="Nominal Rp" 
+                        <input type="number" x-model="addForm.amount" id="amount" required min="0" placeholder="Nominal Rp" @input="broadcastTyping()"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-sm focus:border-indigo-500 focus:ring-indigo-500 p-3">
                     </div>
 
                     <!-- Input Kategori -->
                     <div>
                         <label for="category" class="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Kategori</label>
-                        <select x-model="addForm.category" id="category" required 
+                        <select x-model="addForm.category" id="category" required @change="broadcastTyping()"
                             class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-sm focus:border-indigo-500 focus:ring-indigo-500 p-3">
                             <option value="">Pilih Kategori</option>
                             <option value="Makanan">Makanan</option>
@@ -372,6 +382,9 @@
                 // Real-time Collaboration States
                 activeUsers: [],
                 editingUsers: {}, // { expenseId: userName }
+                typingUsers: {}, // { userId: userName }
+                typingTimeout: null,
+                typingSafeties: {},
                 
                 // Konflik Resolusi State
                 conflict: {
@@ -395,6 +408,10 @@
                             .leaving((user) => {
                                 this.activeUsers = this.activeUsers.filter(u => u.id !== user.id);
                                 this.triggerNotification('warning', user.name + ' meninggalkan kolaborasi.');
+                                if (this.typingUsers[user.id]) {
+                                    delete this.typingUsers[user.id];
+                                    this.typingUsers = { ...this.typingUsers };
+                                }
                             })
                             
                             // 2. Dengarkan Whispering untuk tahu siapa yang sedang edit baris mana
@@ -403,6 +420,28 @@
                             })
                             .listenForWhisper('stopped-editing', (e) => {
                                 delete this.editingUsers[e.expenseId];
+                            })
+                            .listenForWhisper('typing', (e) => {
+                                if (e.userId == '{{ Auth::user()->id }}') return;
+                                this.typingUsers[e.userId] = e.userName;
+                                this.typingUsers = { ...this.typingUsers };
+                                
+                                if (this.typingSafeties[e.userId]) {
+                                    clearTimeout(this.typingSafeties[e.userId]);
+                                }
+                                this.typingSafeties[e.userId] = setTimeout(() => {
+                                    delete this.typingUsers[e.userId];
+                                    this.typingUsers = { ...this.typingUsers };
+                                    delete this.typingSafeties[e.userId];
+                                }, 3000);
+                            })
+                            .listenForWhisper('stopped-typing', (e) => {
+                                if (this.typingSafeties[e.userId]) {
+                                    clearTimeout(this.typingSafeties[e.userId]);
+                                    delete this.typingSafeties[e.userId];
+                                }
+                                delete this.typingUsers[e.userId];
+                                this.typingUsers = { ...this.typingUsers };
                             })
                             
                             // 3. Dengarkan Event Real-Time Broadcasting
@@ -471,9 +510,37 @@
                            date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 },
 
+                // Sinyal Mengetik (Typing Whisper)
+                broadcastTyping() {
+                    if (!window.Echo) return;
+                    window.Echo.join('dashboard').whisper('typing', {
+                        userId: '{{ Auth::user()->id }}',
+                        userName: '{{ Auth::user()->name }}'
+                    });
+
+                    if (this.typingTimeout) {
+                        clearTimeout(this.typingTimeout);
+                    }
+                    this.typingTimeout = setTimeout(() => {
+                        window.Echo.join('dashboard').whisper('stopped-typing', {
+                            userId: '{{ Auth::user()->id }}'
+                        });
+                        this.typingTimeout = null;
+                    }, 2000);
+                },
+
                 // 1. TAMBAH DATA (AJAX - Axios)
                 async addExpense() {
                     try {
+                        if (this.typingTimeout) {
+                            clearTimeout(this.typingTimeout);
+                            this.typingTimeout = null;
+                            if (window.Echo) {
+                                window.Echo.join('dashboard').whisper('stopped-typing', {
+                                    userId: '{{ Auth::user()->id }}'
+                                });
+                            }
+                        }
                         const response = await axios.post('/expenses', this.addForm);
                         if (response.data.success) {
                             // Tambahkan ke array lokal jika belum ada agar langsung ter-render di layar sendiri
